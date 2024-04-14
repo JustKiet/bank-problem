@@ -1,17 +1,13 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-import numpy as np
-import matplotlib.pyplot as plt
-import random
 import streamlit as st
 
 #Load data
-data_path = './bank-problem/bank-data.csv'
+data_path = 'bank-data.csv'
 df = pd.read_csv(data_path)
-df.head()
 
 #Xử lý dữ liệu
 df_processed = df.copy()
@@ -38,12 +34,6 @@ for idx, val in enumerate(df_processed['income']):
 df_processed['income'] = df_processed['income'].astype(int)
 if 'id' in df_processed:
     df_processed.drop('id', axis=1, inplace=True) 
-df_processed.head()
-
-x = df_processed['income']
-y = df_processed['age']
-correlation = x.corr(y)
-print(f"Correlation between {x.name} and {y.name}: {correlation}")
 
 #Chia bộ dữ liệu thành thuộc tính (X) và kết quả (y)
 X = df_processed.drop('pep', axis=1)  # Thuộc tính
@@ -62,9 +52,9 @@ rf.fit(X_train, y_train)
 # Dự đoán theo X_test
 y_rf = rf.predict(X_test)
 
-accuracy = accuracy_score(y_test, y_rf)
+accuracy_rf = accuracy_score(y_test, y_rf)
 print(classification_report(y_test, y_rf))
-print(f"Accuracy: {accuracy * 100:.2f}%")
+print(f"Accuracy: {accuracy_rf * 100:.2f}%")
 
 
 #ID3
@@ -76,9 +66,9 @@ y_id3 = id3.predict(X_test)
 
 confusion_matrix = confusion_matrix(y_test, y_id3)
 print(confusion_matrix)
-accuracy = accuracy_score(y_test, y_id3)
+accuracy_id3 = accuracy_score(y_test, y_id3)
 print(classification_report(y_test, y_id3))
-print(f"Accuracy: {accuracy * 100:.2f}%")
+print(f"Accuracy: {accuracy_id3 * 100:.2f}%")
 
 
 #CART
@@ -88,23 +78,36 @@ cart.fit(X_train, y_train)
 
 y_cart = cart.predict(X_test)
 
-accuracy = accuracy_score(y_test, y_cart)
+accuracy_cart = accuracy_score(y_test, y_cart)
 print(classification_report(y_test, y_cart))
-print(f"Accuracy: {accuracy * 100:.2f}%")
+print(f"Accuracy: {accuracy_cart * 100:.2f}%")
+
+
+def pickModel(rf_acc, cart_acc, id3_acc, inputVar):
+    bestModel = max(rf_acc, cart_acc, id3_acc)
+    if bestModel == rf_acc:
+        y_pred = rf.predict(inputVar)
+        return y_pred
+    elif bestModel == cart_acc:
+        y_pred = cart.predict(inputVar)
+        return y_pred
+    elif bestModel == id3_acc:
+        y_pred = id3.predict(inputVar)
+        return y_pred
 
 
 #Streamlit GUI
 form = st.form(key='index')
 age = int(form.number_input('age', step=1, format="%i"))
-sex = int(form.number_input('sex', step=1, format="%i"))
-region = int(form.number_input('region', step=1, format="%i"))
+sex = int(form.number_input("sex (FEMALE: 0, MALE: 1)", step=1, format="%i"))
+region = int(form.number_input("region ('INNER_CITY': 0, 'TOWN': 1, 'RURAL': 2, 'SUBURBAN': 3)", step=1, format="%i"))
 income = int(form.number_input('income', step=1, format="%i"))
-married = int(form.number_input('married', step=1, format="%i"))
+married = int(form.number_input('married (YES: 1, NO: 0)', step=1, format="%i"))
 children = int(form.number_input('children', step=1, format="%i"))
-car = int(form.number_input('car', step=1, format="%i"))
-save_act = int(form.number_input('save_act', step=1, format="%i"))
-current_act = int(form.number_input('current_act', step=1, format="%i"))
-mortgage = int(form.number_input('mortgage', step=1, format="%i"))
+car = int(form.number_input('car (YES: 1, NO: 0)', step=1, format="%i"))
+save_act = int(form.number_input('save_act (YES: 1, NO: 0)', step=1, format="%i"))
+current_act = int(form.number_input('current_act (YES: 1, NO: 0)', step=1, format="%i"))
+mortgage = int(form.number_input('mortgage (YES: 1, NO: 0)', step=1, format="%i"))
 submit = form.form_submit_button('Submit')
 
 if submit:
@@ -126,10 +129,6 @@ if submit:
 
     X_user.loc[len(X_user)] = [age, sex, region, income, married, children, car, save_act, current_act, mortgage]
 
-    y_pred_rf = rf.predict(X_user)
-    y_pred_id3 = id3.predict(X_user)
-    y_pred_cart = cart.predict(X_user)
+    result = pickModel(accuracy_rf, accuracy_cart, accuracy_id3, X_user)
 
-    st.write("Random Forest", y_pred_rf)
-    st.write("ID3",y_pred_id3)
-    st.write("CART", y_pred_cart)
+    st.write("PEP (YES: 1, NO: 0)", result)
